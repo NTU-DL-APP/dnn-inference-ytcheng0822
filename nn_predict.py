@@ -3,12 +3,12 @@ import json
 
 # === Activation functions ===
 def relu(x):
-    # TODO: Implement the Rectified Linear Unit
-    return x
+    return np.maximum(0, x)
 
 def softmax(x):
-    # TODO: Implement the SoftMax function
-    return x
+    # Softmax with numerical stability
+    exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))
+    return exp_x / np.sum(exp_x, axis=1, keepdims=True)
 
 # === Flatten ===
 def flatten(x):
@@ -18,12 +18,10 @@ def flatten(x):
 def dense(x, W, b):
     return x @ W + b
 
-# Infer TensorFlow h5 model using numpy
-# Support only Dense, Flatten, relu, softmax now
+# === Forward pass ===
 def nn_forward_h5(model_arch, weights, data):
     x = data
     for layer in model_arch:
-        lname = layer['name']
         ltype = layer['type']
         cfg = layer['config']
         wnames = layer['weights']
@@ -41,8 +39,27 @@ def nn_forward_h5(model_arch, weights, data):
 
     return x
 
-
-# You are free to replace nn_forward_h5() with your own implementation 
+# === Inference entry point ===
 def nn_inference(model_arch, weights, data):
     return nn_forward_h5(model_arch, weights, data)
-    
+
+# === Optional: Entry point for testing ===
+if __name__ == "__main__":
+    # Load model architecture
+    with open("model/fashion_mnist.json", "r") as f:
+        model_arch = json.load(f)
+
+    # Load weights
+    weights_npz = np.load("model/fashion_mnist.npz")
+    weights = {key: weights_npz[key] for key in weights_npz.files}
+
+    # Load and normalize test data (example path)
+    x_test = np.load("data/x_test.npy")  # shape: (N, 28, 28)
+    x_test = x_test.astype(np.float32) / 255.0
+
+    # Inference
+    logits = nn_inference(model_arch, weights, x_test)
+    predictions = np.argmax(logits, axis=1)
+
+    # Save or print predictions
+    print("Predictions:", predictions)
